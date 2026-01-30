@@ -71,6 +71,7 @@
         align-items: center;
         justify-content: center;
         font-size: 18px;
+        pointer-events: auto !important;
       }
       .leaflet-control-pan:hover,
       .leaflet-control-toggle:hover {
@@ -159,6 +160,18 @@
           );
           container.innerHTML = "✋";
           container.title = "Pan Mode";
+          L.DomEvent.on(container, "mousedown", function(e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+          });
+          L.DomEvent.on(container, "touchstart", function(e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+          });
+          L.DomEvent.on(container, "dblclick", function(e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+          });
           L.DomEvent.on(container, "click", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
@@ -188,6 +201,18 @@
           container.innerHTML = "👁️";
           container.title = "Show/Hide drawings";
           var visible = true;
+          L.DomEvent.on(container, "mousedown", function(e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+          });
+          L.DomEvent.on(container, "touchstart", function(e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+          });
+          L.DomEvent.on(container, "dblclick", function(e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+          });
           L.DomEvent.on(container, "click", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
