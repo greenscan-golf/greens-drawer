@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>IGN Map with Drawing + JSON Import + ESRI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
+    />
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        height: 100vh;
+      }
+      #map {
+        flex: 1;
+      }
+      #jsonPanel {
+        width: 400px;
+        overflow: auto;
+        background: #f5f5f5;
+        padding: 10px;
+        font-family: monospace;
+        border-left: 1px solid #ccc;
+        white-space: pre-wrap;
+      }
+      /* Reduce editing handle size */
+      .leaflet-editing-icon {
+        width: 6px !important;
+        height: 6px !important;
+        margin-left: -3px !important;
+        margin-top: -3px !important;
+        border-radius: 6px !important;
+      }
+      .leaflet-touch .leaflet-editing-icon {
+        width: 6px !important;
+        height: 6px !important;
+        margin-left: -3px !important;
+        margin-top: -3px !important;
+      }
+      /* Remove tooltips */
+      .leaflet-draw-tooltip {
+        display: none !important;
+      }
+      /* Hand cursor in pan mode */
+      #map.pan-mode {
+        cursor: grab !important;
+      }
+      #map.pan-mode:active {
+        cursor: grabbing !important;
+      }
+      /* Control buttons */
+      .leaflet-control-pan,
+      .leaflet-control-toggle {
+        background: white;
+        width: 30px;
+        height: 30px;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+      .leaflet-control-pan:hover,
+      .leaflet-control-toggle:hover {
+        background: #f4f4f4;
+      }
+      .leaflet-control-pan.active,
+      .leaflet-control-toggle.active {
+        background: #3388ff;
+        color: white;
+      }
+      /* Bottom buttons for basemap switch */
+      #basemapSwitch {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+      }
+      #basemapSwitch button {
+        padding: 6px 12px;
+        margin: 0 2px;
+        border: 1px solid #888;
+        background: white;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+      #basemapSwitch button.active {
+        background: #3388ff;
+        color: white;
+        border-color: #3388ff;
+      }
+      #btnESRI {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="jsonPanel" contenteditable="true"></div>
+
+    <div id="basemapSwitch">
+      <button id="btnIGN" class="active">IGN</button>
+      <button id="btnESRI">ESRI</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <script>
+      var map = L.map("map", { maxZoom: 22 }).setView([46.6, 2.5], 6);
+
+      // --- BASEMAPS ---
+      var ortho = L.tileLayer(
+        "https://data.geopf.fr/wmts?layer=ORTHOIMAGERY.ORTHOPHOTOS&style=normal&tilematrixset=PM&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/jpeg&TileMatrix={z}&TileCol={x}&TileRow={y}",
+        { attribution: "© IGN", maxZoom: 22, maxNativeZoom: 19, minZoom: 1 },
+      ).addTo(map);
+
+      var esri = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        { attribution: "© Esri", maxZoom: 22, maxNativeZoom: 19 },
+      );
+
+      // --- DRAWING ---
+      var drawnItems = new L.FeatureGroup();
+      map.addLayer(drawnItems);
+
+      var drawControl = new L.Control.Draw({
+        edit: { featureGroup: drawnItems },
+        draw: {
+          polyline: false,
+          rectangle: false,
+          circle: false,
+          circlemarker: false,
+          marker: true,
+          polygon: true,
+        },
+      });
+      map.addControl(drawControl);
+
+      // --- CUSTOM CONTROLS ---
+      L.Control.Pan = L.Control.extend({
+        onAdd: function (map) {
+          var container = L.DomUtil.create(
+            "div",
+            "leaflet-bar leaflet-control leaflet-control-pan",
+          );
+          container.innerHTML = "✋";
+          container.title = "Pan Mode";
+          L.DomEvent.on(container, "click", function (e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+            if (container.classList.contains("active")) {
+              container.classList.remove("active");
+              map._container.classList.remove("pan-mode");
+              map.dragging.enable();
+            } else {
+              container.classList.add("active");
+              map._container.classList.add("pan-mode");
+              map.dragging.enable();
+            }
+          });
+          return container;
+        },
+      });
+      L.control.pan = function (opts) {
+        return new L.Control.Pan(opts);
+      };
+
+      L.Control.ToggleDrawings = L.Control.extend({
+        onAdd: function (map) {
+          var container = L.DomUtil.create(
+            "div",
+            "leaflet-bar leaflet-control leaflet-control-toggle active",
+          );
+          container.innerHTML = "👁️";
+          container.title = "Show/Hide drawings";
+          var visible = true;
+          L.DomEvent.on(container, "click", function (e) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+            visible = !visible;
+            if (visible) {
+              container.classList.add("active");
+              map.addLayer(drawnItems);
+            } else {
+              container.classList.remove("active");
+              map.removeLayer(drawnItems);
+            }
+          });
+          return container;
+        },
+      });
+      L.control.toggleDrawings = function (opts) {
+        return new L.Control.ToggleDrawings(opts);
+      };
+
+      L.control.pan({ position: "topleft" }).addTo(map);
+      L.control.toggleDrawings({ position: "topleft" }).addTo(map);
+
+      // --- JSON PANEL ---
+      var jsonPanel = document.getElementById("jsonPanel");
+
+      function updateJSONPanel() {
+        var geojson = drawnItems.toGeoJSON();
+        var jsonText = JSON.stringify(geojson, null, 2);
+        jsonPanel.textContent = jsonText;
+        localStorage.setItem("mapGeoJSON", jsonText);
+      }
+
+      map.on(L.Draw.Event.CREATED, (e) => {
+        drawnItems.addLayer(e.layer);
+        updateJSONPanel();
+      });
+      map.on("draw:edited draw:deleted", updateJSONPanel);
+
+      function loadGeoJSONFromPanel(shouldZoom) {
+        var text = jsonPanel.textContent.trim();
+        if (!text) return;
+        try {
+          var data = JSON.parse(text);
+          if (data.type === "FeatureCollection") {
+            drawnItems.clearLayers();
+            L.geoJSON(data, {
+              pointToLayer: (f, latlng) => L.marker(latlng),
+            }).eachLayer((l) => drawnItems.addLayer(l));
+            localStorage.setItem("mapGeoJSON", JSON.stringify(data));
+            if (shouldZoom && drawnItems.getLayers().length)
+              map.fitBounds(drawnItems.getBounds(), { padding: [50, 50] });
+          }
+        } catch (e) {
+          console.log("Invalid JSON", e);
+        }
+      }
+
+      // --- PANEL INPUT / PASTE ---
+      var inputTimeout;
+      jsonPanel.addEventListener("input", () => {
+        clearTimeout(inputTimeout);
+        inputTimeout = setTimeout(() => loadGeoJSONFromPanel(true), 1000);
+      });
+      jsonPanel.addEventListener("paste", (e) => {
+        e.preventDefault();
+        jsonPanel.textContent = (
+          e.clipboardData || window.clipboardData
+        ).getData("text");
+        setTimeout(() => loadGeoJSONFromPanel(true), 100);
+      });
+
+      // --- LOAD LOCALSTORAGE ---
+      var savedData = localStorage.getItem("mapGeoJSON");
+      if (savedData) {
+        jsonPanel.textContent = savedData;
+        loadGeoJSONFromPanel(true);
+      } else updateJSONPanel();
+
+      // --- SWITCH BASEMAPS ---
+      var btnIGN = document.getElementById("btnIGN"),
+        btnESRI = document.getElementById("btnESRI");
+      btnIGN.onclick = () => {
+        map.removeLayer(esri);
+        map.addLayer(ortho);
+        btnIGN.classList.add("active");
+        btnESRI.classList.remove("active");
+      };
+      btnESRI.onclick = () => {
+        map.removeLayer(ortho);
+        map.addLayer(esri);
+        btnESRI.classList.add("active");
+        btnIGN.classList.remove("active");
+      };
+    </script>
+  </body>
+</html>
