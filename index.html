@@ -43,17 +43,30 @@
         overflow: auto;
         margin-bottom: 10px;
       }
-      #btnClear {
+      #buttonContainer {
+        display: flex;
+        gap: 8px;
+      }
+      #btnClear, #btnDownload {
         padding: 8px 12px;
-        background: #ff6b6b;
         color: white;
         border: none;
         border-radius: 4px;
         cursor: pointer;
         font-weight: bold;
+        flex: 1;
+      }
+      #btnClear {
+        background: #ff6b6b;
       }
       #btnClear:hover {
         background: #ff5252;
+      }
+      #btnDownload {
+        background: #4caf50;
+      }
+      #btnDownload:hover {
+        background: #45a049;
       }
       /* Reduce editing handle size */
       .leaflet-editing-icon {
@@ -154,7 +167,10 @@
     <div id="map"></div>
     <div id="jsonPanel">
       <div id="jsonContent" contenteditable="true"></div>
-      <button id="btnClear">Clear</button>
+      <div id="buttonContainer">
+        <button id="btnDownload">⬇ Download</button>
+        <button id="btnClear">Clear</button>
+      </div>
     </div>
 
     <div id="basemapSwitch">
@@ -286,6 +302,7 @@
       // --- JSON PANEL ---
       var jsonPanel = document.getElementById("jsonContent");
       var btnClear = document.getElementById("btnClear");
+      var btnDownload = document.getElementById("btnDownload");
       var toast = document.getElementById("toast");
 
       function showToast(message, duration) {
@@ -361,6 +378,26 @@
         drawnItems.clearLayers();
         jsonPanel.textContent = "";
         updateJSONPanel();
+      });
+
+      btnDownload.addEventListener("click", function(e) {
+        e.stopPropagation();
+        var text = jsonPanel.textContent.trim();
+        if (!text) {
+          showToast("⚠️ Aucune donnée à télécharger", 2000);
+          return;
+        }
+        
+        var blob = new Blob([text], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "greens-" + new Date().toISOString().split('T')[0] + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("✅ Téléchargement démarré", 2000);
       });
 
       // --- PANEL INPUT / PASTE ---
