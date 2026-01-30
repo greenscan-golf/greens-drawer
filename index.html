@@ -187,6 +187,81 @@
       #imageDate.visible {
         display: block;
       }
+      /* Search box */
+      #searchContainer {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        width: 90%;
+        max-width: 400px;
+      }
+      #searchBox {
+        width: 100%;
+        padding: 12px 40px 12px 16px;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: sans-serif;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        background: white;
+        outline: none;
+        box-sizing: border-box;
+      }
+      #searchBox:focus {
+        border-color: #3388ff;
+      }
+      #searchIcon {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #888;
+        pointer-events: none;
+      }
+      #searchResults {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        margin-top: 4px;
+        max-height: 300px;
+        overflow-y: auto;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        display: none;
+      }
+      #searchResults.visible {
+        display: block;
+      }
+      .search-result-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+        font-family: sans-serif;
+        font-size: 14px;
+      }
+      .search-result-item:last-child {
+        border-bottom: none;
+      }
+      .search-result-item:hover {
+        background: #f0f0f0;
+      }
+      .search-result-item:active {
+        background: #e0e0e0;
+      }
+      .search-result-name {
+        font-weight: 500;
+        color: #333;
+      }
+      .search-result-details {
+        font-size: 12px;
+        color: #666;
+        margin-top: 2px;
+      }
       /* Mobile responsive */
       @media (max-width: 768px) {
         body {
@@ -220,12 +295,26 @@
           font-size: 14px;
           min-height: 44px;
         }
+        #searchContainer {
+          width: calc(100% - 20px);
+          max-width: none;
+        }
       }
     </style>
   </head>
   <body>
     <div id="map"></div>
     <div id="imageDate"></div>
+    
+    <!-- Search box -->
+    <div id="searchContainer">
+      <div style="position: relative;">
+        <input type="text" id="searchBox" placeholder="Rechercher un lieu..." />
+        <span id="searchIcon">🔍</span>
+      </div>
+      <div id="searchResults"></div>
+    </div>
+    
     <div id="jsonPanel">
       <div id="jsonContent" contenteditable="true"></div>
       <div id="buttonContainer">
@@ -359,6 +448,142 @@
 
       L.control.pan({ position: "topleft" }).addTo(map);
       L.control.toggleDrawings({ position: "topleft" }).addTo(map);
+
+      // --- SEARCH FUNCTIONALITY ---
+      var searchBox = document.getElementById("searchBox");
+      var searchResults = document.getElementById("searchResults");
+      var searchTimeout;
+      var searchMarker;
+
+      function performSearch(query) {
+        if (query.length < 3) {
+          searchResults.classList.remove("visible");
+          return;
+        }
+
+        // Using Nominatim API for geocoding
+        var url = "https://nominatim.openstreetmap.org/search?format=json&q=" + 
+                  encodeURIComponent(query) + 
+                  "&countrycodes=fr&limit=5&addressdetails=1";
+
+        fetch(url)
+          .then(function(response) { return response.json(); })
+          .then(function(data) {
+            displaySearchResults(data);
+          })
+          .catch(function(error) {
+            console.error("Search error:", error);
+          });
+      }
+
+      function displaySearchResults(results) {
+        searchResults.innerHTML = "";
+        
+        if (results.length === 0) {
+          searchResults.innerHTML = '<div class="search-result-item">Aucun résultat trouvé</div>';
+          searchResults.classList.add("visible");
+          return;
+        }
+
+        results.forEach(function(result) {
+          var item = document.createElement("div");
+          item.className = "search-result-item";
+          
+          var name = document.createElement("div");
+          name.className = "search-result-name";
+          name.textContent = result.display_name.split(",")[0];
+          
+          var details = document.createElement("div");
+          details.className = "search-result-details";
+          details.textContent = result.display_name;
+          
+          item.appendChild(name);
+          item.appendChild(details);
+          
+          item.addEventListener("click", function() {
+            zoomToResult(result);
+          });
+          
+          item.addEventListener("touchend", function(e) {
+            e.preventDefault();
+            zoomToResult(result);
+          });
+          
+          searchResults.appendChild(item);
+        });
+        
+        searchResults.classList.add("visible");
+      }
+
+      function zoomToResult(result) {
+        var lat = parseFloat(result.lat);
+        var lon = parseFloat(result.lon);
+        
+        // Remove previous search marker if exists
+        if (searchMarker) {
+          map.removeLayer(searchMarker);
+        }
+        
+        // Add temporary marker
+        searchMarker = L.marker([lat, lon], {
+          icon: L.divIcon({
+            className: 'search-marker',
+            html: '<div style="background: #ff4444; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          })
+        }).addTo(map);
+        
+        // Zoom to location
+        var zoom = 16;
+        if (result.boundingbox) {
+          var bounds = [
+            [parseFloat(result.boundingbox[0]), parseFloat(result.boundingbox[2])],
+            [parseFloat(result.boundingbox[1]), parseFloat(result.boundingbox[3])]
+          ];
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
+        } else {
+          map.setView([lat, lon], zoom);
+        }
+        
+        // Clear search box and results
+        searchBox.value = result.display_name.split(",")[0];
+        searchResults.classList.remove("visible");
+        searchBox.blur();
+        
+        // Remove marker after 5 seconds
+        setTimeout(function() {
+          if (searchMarker) {
+            map.removeLayer(searchMarker);
+            searchMarker = null;
+          }
+        }, 5000);
+      }
+
+      searchBox.addEventListener("input", function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+          performSearch(searchBox.value);
+        }, 300);
+      });
+
+      searchBox.addEventListener("focus", function() {
+        if (searchBox.value.length >= 3) {
+          performSearch(searchBox.value);
+        }
+      });
+
+      // Close search results when clicking outside
+      document.addEventListener("click", function(e) {
+        if (!searchBox.contains(e.target) && !searchResults.contains(e.target)) {
+          searchResults.classList.remove("visible");
+        }
+      });
+
+      // Prevent map clicks from propagating when clicking search
+      document.getElementById("searchContainer").addEventListener("click", function(e) {
+        e.stopPropagation();
+      });
 
       // --- JSON PANEL ---
       var jsonPanel = document.getElementById("jsonContent");
