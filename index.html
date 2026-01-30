@@ -47,7 +47,8 @@
         display: flex;
         gap: 8px;
       }
-      #btnClear, #btnDownload {
+      #btnClear,
+      #btnDownload {
         padding: 8px 12px;
         color: white;
         border: none;
@@ -61,14 +62,19 @@
       #btnClear {
         background: #ff6b6b;
       }
-      #btnClear:hover, #btnClear:active {
+      #btnClear:hover,
+      #btnClear:active {
         background: #ff5252;
       }
       #btnDownload {
         background: #4caf50;
       }
-      #btnDownload:hover, #btnDownload:active {
+      #btnDownload:hover,
+      #btnDownload:active {
         background: #45a049;
+      }
+      .leaflet-top {
+        top: 100px !important;
       }
       /* Reduce editing handle size */
       .leaflet-editing-icon {
@@ -181,7 +187,7 @@
         font-family: sans-serif;
         font-size: 12px;
         z-index: 1000;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         display: none;
       }
       #imageDate.visible {
@@ -204,7 +210,7 @@
         border-radius: 8px;
         font-size: 14px;
         font-family: sans-serif;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
         background: white;
         outline: none;
         box-sizing: border-box;
@@ -231,7 +237,7 @@
         margin-top: 4px;
         max-height: 300px;
         overflow-y: auto;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         display: none;
       }
       #searchResults.visible {
@@ -285,7 +291,8 @@
         #buttonContainer {
           flex-direction: row;
         }
-        #btnClear, #btnDownload {
+        #btnClear,
+        #btnDownload {
           padding: 10px 12px;
           font-size: 14px;
           min-height: 44px;
@@ -305,16 +312,16 @@
   <body>
     <div id="map"></div>
     <div id="imageDate"></div>
-    
+
     <!-- Search box -->
     <div id="searchContainer">
-      <div style="position: relative;">
+      <div style="position: relative">
         <input type="text" id="searchBox" placeholder="Rechercher un lieu..." />
         <span id="searchIcon">🔍</span>
       </div>
       <div id="searchResults"></div>
     </div>
-    
+
     <div id="jsonPanel">
       <div id="jsonContent" contenteditable="true"></div>
       <div id="buttonContainer">
@@ -373,15 +380,15 @@
           );
           container.innerHTML = "✋";
           container.title = "Pan Mode";
-          L.DomEvent.on(container, "mousedown", function(e) {
+          L.DomEvent.on(container, "mousedown", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
           });
-          L.DomEvent.on(container, "touchstart", function(e) {
+          L.DomEvent.on(container, "touchstart", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
           });
-          L.DomEvent.on(container, "dblclick", function(e) {
+          L.DomEvent.on(container, "dblclick", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
           });
@@ -414,15 +421,15 @@
           container.innerHTML = "👁️";
           container.title = "Show/Hide drawings";
           var visible = true;
-          L.DomEvent.on(container, "mousedown", function(e) {
+          L.DomEvent.on(container, "mousedown", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
           });
-          L.DomEvent.on(container, "touchstart", function(e) {
+          L.DomEvent.on(container, "touchstart", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
           });
-          L.DomEvent.on(container, "dblclick", function(e) {
+          L.DomEvent.on(container, "dblclick", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
@@ -462,97 +469,107 @@
         }
 
         // Using Nominatim API for geocoding
-        var url = "https://nominatim.openstreetmap.org/search?format=json&q=" + 
-                  encodeURIComponent(query) + 
-                  "&countrycodes=fr&limit=5&addressdetails=1";
+        var url =
+          "https://nominatim.openstreetmap.org/search?format=json&q=" +
+          encodeURIComponent(query) +
+          "&countrycodes=fr&limit=5&addressdetails=1";
 
         fetch(url)
-          .then(function(response) { return response.json(); })
-          .then(function(data) {
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
             displaySearchResults(data);
           })
-          .catch(function(error) {
+          .catch(function (error) {
             console.error("Search error:", error);
           });
       }
 
       function displaySearchResults(results) {
         searchResults.innerHTML = "";
-        
+
         if (results.length === 0) {
-          searchResults.innerHTML = '<div class="search-result-item">Aucun résultat trouvé</div>';
+          searchResults.innerHTML =
+            '<div class="search-result-item">Aucun résultat trouvé</div>';
           searchResults.classList.add("visible");
           return;
         }
 
-        results.forEach(function(result) {
+        results.forEach(function (result) {
           var item = document.createElement("div");
           item.className = "search-result-item";
-          
+
           var name = document.createElement("div");
           name.className = "search-result-name";
           name.textContent = result.display_name.split(",")[0];
-          
+
           var details = document.createElement("div");
           details.className = "search-result-details";
           details.textContent = result.display_name;
-          
+
           item.appendChild(name);
           item.appendChild(details);
-          
-          item.addEventListener("click", function() {
+
+          item.addEventListener("click", function () {
             zoomToResult(result);
           });
-          
-          item.addEventListener("touchend", function(e) {
+
+          item.addEventListener("touchend", function (e) {
             e.preventDefault();
             zoomToResult(result);
           });
-          
+
           searchResults.appendChild(item);
         });
-        
+
         searchResults.classList.add("visible");
       }
 
       function zoomToResult(result) {
         var lat = parseFloat(result.lat);
         var lon = parseFloat(result.lon);
-        
+
         // Remove previous search marker if exists
         if (searchMarker) {
           map.removeLayer(searchMarker);
         }
-        
+
         // Add temporary marker
         searchMarker = L.marker([lat, lon], {
           icon: L.divIcon({
-            className: 'search-marker',
+            className: "search-marker",
             html: '<div style="background: #ff4444; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>',
             iconSize: [20, 20],
-            iconAnchor: [10, 10]
-          })
+            iconAnchor: [10, 10],
+          }),
         }).addTo(map);
-        
+
         // Zoom to location
         var zoom = 16;
         if (result.boundingbox) {
           var bounds = [
-            [parseFloat(result.boundingbox[0]), parseFloat(result.boundingbox[2])],
-            [parseFloat(result.boundingbox[1]), parseFloat(result.boundingbox[3])]
+            [
+              parseFloat(result.boundingbox[0]),
+              parseFloat(result.boundingbox[2]),
+            ],
+            [
+              parseFloat(result.boundingbox[1]),
+              parseFloat(result.boundingbox[3]),
+            ],
           ];
           map.fitBounds(bounds, { padding: [50, 50], maxZoom: 18 });
         } else {
           map.setView([lat, lon], zoom);
         }
-        
+
         // Clear search box and results
         searchBox.value = result.display_name.split(",")[0];
         searchResults.classList.remove("visible");
         searchBox.blur();
-        
+
         // Remove marker after 5 seconds
-        setTimeout(function() {
+        setTimeout(function () {
           if (searchMarker) {
             map.removeLayer(searchMarker);
             searchMarker = null;
@@ -560,30 +577,35 @@
         }, 5000);
       }
 
-      searchBox.addEventListener("input", function() {
+      searchBox.addEventListener("input", function () {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(function() {
+        searchTimeout = setTimeout(function () {
           performSearch(searchBox.value);
         }, 300);
       });
 
-      searchBox.addEventListener("focus", function() {
+      searchBox.addEventListener("focus", function () {
         if (searchBox.value.length >= 3) {
           performSearch(searchBox.value);
         }
       });
 
       // Close search results when clicking outside
-      document.addEventListener("click", function(e) {
-        if (!searchBox.contains(e.target) && !searchResults.contains(e.target)) {
+      document.addEventListener("click", function (e) {
+        if (
+          !searchBox.contains(e.target) &&
+          !searchResults.contains(e.target)
+        ) {
           searchResults.classList.remove("visible");
         }
       });
 
       // Prevent map clicks from propagating when clicking search
-      document.getElementById("searchContainer").addEventListener("click", function(e) {
-        e.stopPropagation();
-      });
+      document
+        .getElementById("searchContainer")
+        .addEventListener("click", function (e) {
+          e.stopPropagation();
+        });
 
       // --- JSON PANEL ---
       var jsonPanel = document.getElementById("jsonContent");
@@ -595,7 +617,7 @@
         duration = duration || 3000;
         toast.textContent = message;
         toast.classList.add("show");
-        setTimeout(function() {
+        setTimeout(function () {
           toast.classList.remove("show");
         }, duration);
       }
@@ -660,64 +682,78 @@
 
       // Fonction pour gérer les clics (desktop et mobile)
       function handleClick(callback) {
-        return function(e) {
+        return function (e) {
           e.stopPropagation();
           e.preventDefault();
           callback();
         };
       }
 
-      btnClear.addEventListener("click", handleClick(function() {
-        localStorage.removeItem("mapGeoJSON");
-        drawnItems.clearLayers();
-        jsonPanel.textContent = "";
-        updateJSONPanel();
-      }));
+      btnClear.addEventListener(
+        "click",
+        handleClick(function () {
+          localStorage.removeItem("mapGeoJSON");
+          drawnItems.clearLayers();
+          jsonPanel.textContent = "";
+          updateJSONPanel();
+        }),
+      );
 
-      btnClear.addEventListener("touchend", handleClick(function() {
-        localStorage.removeItem("mapGeoJSON");
-        drawnItems.clearLayers();
-        jsonPanel.textContent = "";
-        updateJSONPanel();
-      }));
+      btnClear.addEventListener(
+        "touchend",
+        handleClick(function () {
+          localStorage.removeItem("mapGeoJSON");
+          drawnItems.clearLayers();
+          jsonPanel.textContent = "";
+          updateJSONPanel();
+        }),
+      );
 
-      btnDownload.addEventListener("click", handleClick(function() {
-        var text = jsonPanel.textContent.trim();
-        if (!text) {
-          showToast("⚠️ Aucune donnée à télécharger", 2000);
-          return;
-        }
-        
-        var blob = new Blob([text], { type: "application/json" });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = "greens-" + new Date().toISOString().split('T')[0] + ".json";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast("✅ Téléchargement démarré", 2000);
-      }));
+      btnDownload.addEventListener(
+        "click",
+        handleClick(function () {
+          var text = jsonPanel.textContent.trim();
+          if (!text) {
+            showToast("⚠️ Aucune donnée à télécharger", 2000);
+            return;
+          }
 
-      btnDownload.addEventListener("touchend", handleClick(function() {
-        var text = jsonPanel.textContent.trim();
-        if (!text) {
-          showToast("⚠️ Aucune donnée à télécharger", 2000);
-          return;
-        }
-        
-        var blob = new Blob([text], { type: "application/json" });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = "greens-" + new Date().toISOString().split('T')[0] + ".json";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showToast("✅ Téléchargement démarré", 2000);
-      }));
+          var blob = new Blob([text], { type: "application/json" });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download =
+            "greens-" + new Date().toISOString().split("T")[0] + ".json";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast("✅ Téléchargement démarré", 2000);
+        }),
+      );
+
+      btnDownload.addEventListener(
+        "touchend",
+        handleClick(function () {
+          var text = jsonPanel.textContent.trim();
+          if (!text) {
+            showToast("⚠️ Aucune donnée à télécharger", 2000);
+            return;
+          }
+
+          var blob = new Blob([text], { type: "application/json" });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download =
+            "greens-" + new Date().toISOString().split("T")[0] + ".json";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast("✅ Téléchargement démarré", 2000);
+        }),
+      );
 
       // --- PANEL INPUT / PASTE ---
       var inputTimeout;
@@ -734,15 +770,19 @@
       });
 
       // --- LOAD LOCALSTORAGE or greens.json ---
-      window.addEventListener('load', function() {
+      window.addEventListener("load", function () {
         var savedData = localStorage.getItem("mapGeoJSON");
         var shouldLoadGreens = true;
-        
+
         if (savedData) {
           try {
             var data = JSON.parse(savedData);
             // Check if there are actual features
-            if (data.type === "FeatureCollection" && data.features && data.features.length > 0) {
+            if (
+              data.type === "FeatureCollection" &&
+              data.features &&
+              data.features.length > 0
+            ) {
               jsonPanel.textContent = savedData;
               loadGeoJSONFromPanel(true);
               shouldLoadGreens = false;
@@ -751,7 +791,7 @@
             console.log("Invalid saved data", e);
           }
         }
-        
+
         if (shouldLoadGreens) {
           loadGreensJSON();
         }
@@ -761,19 +801,20 @@
       var btnIGN = document.getElementById("btnIGN"),
         btnESRI = document.getElementById("btnESRI");
       var imageDate = document.getElementById("imageDate");
-      
+
       // Fonction pour récupérer la date de prise de vue IGN
       function updateImageDate() {
         if (!map.hasLayer(ortho)) {
           imageDate.classList.remove("visible");
           return;
         }
-        
+
         var center = map.getCenter();
         var zoom = map.getZoom();
-        
+
         // API IGN pour obtenir les métadonnées de la couche
-        var url = "https://data.geopf.fr/wmts?" +
+        var url =
+          "https://data.geopf.fr/wmts?" +
           "layer=ORTHOIMAGERY.ORTHOPHOTOS&" +
           "style=normal&" +
           "tilematrixset=PM&" +
@@ -781,30 +822,51 @@
           "Request=GetFeatureInfo&" +
           "Version=1.0.0&" +
           "Format=image/jpeg&" +
-          "TileMatrix=" + Math.floor(zoom) + "&" +
-          "TileCol=" + Math.floor((center.lng + 180) / 360 * Math.pow(2, Math.floor(zoom))) + "&" +
-          "TileRow=" + Math.floor((1 - Math.log(Math.tan(center.lat * Math.PI / 180) + 1 / Math.cos(center.lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, Math.floor(zoom))) + "&" +
+          "TileMatrix=" +
+          Math.floor(zoom) +
+          "&" +
+          "TileCol=" +
+          Math.floor(
+            ((center.lng + 180) / 360) * Math.pow(2, Math.floor(zoom)),
+          ) +
+          "&" +
+          "TileRow=" +
+          Math.floor(
+            ((1 -
+              Math.log(
+                Math.tan((center.lat * Math.PI) / 180) +
+                  1 / Math.cos((center.lat * Math.PI) / 180),
+              ) /
+                Math.PI) /
+              2) *
+              Math.pow(2, Math.floor(zoom)),
+          ) +
+          "&" +
           "I=128&J=128&" +
           "InfoFormat=application/json";
-        
+
         fetch(url)
-          .then(function(response) { return response.json(); })
-          .then(function(data) {
+          .then(function (response) {
+            return response.json();
+          })
+          .then(function (data) {
             if (data && data.features && data.features.length > 0) {
-              var date = data.features[0].properties.date_vol || data.features[0].properties.date;
+              var date =
+                data.features[0].properties.date_vol ||
+                data.features[0].properties.date;
               if (date) {
                 imageDate.textContent = "📅 Prise de vue : " + date;
                 imageDate.classList.add("visible");
               }
             }
           })
-          .catch(function() {
+          .catch(function () {
             // En cas d'erreur, on affiche une date générique
             imageDate.textContent = "📅 Orthophoto IGN";
             imageDate.classList.add("visible");
           });
       }
-      
+
       function switchToIGN() {
         map.removeLayer(esri);
         map.addLayer(ortho);
@@ -821,37 +883,37 @@
         imageDate.classList.remove("visible");
       }
 
-      btnIGN.addEventListener("click", function(e) {
+      btnIGN.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
         switchToIGN();
       });
 
-      btnIGN.addEventListener("touchend", function(e) {
+      btnIGN.addEventListener("touchend", function (e) {
         e.preventDefault();
         e.stopPropagation();
         switchToIGN();
       });
 
-      btnESRI.addEventListener("click", function(e) {
+      btnESRI.addEventListener("click", function (e) {
         e.preventDefault();
         e.stopPropagation();
         switchToESRI();
       });
 
-      btnESRI.addEventListener("touchend", function(e) {
+      btnESRI.addEventListener("touchend", function (e) {
         e.preventDefault();
         e.stopPropagation();
         switchToESRI();
       });
-      
+
       // Mettre à jour la date quand on déplace la carte
-      map.on("moveend", function() {
+      map.on("moveend", function () {
         if (map.hasLayer(ortho)) {
           updateImageDate();
         }
       });
-      
+
       // Afficher la date au chargement initial
       updateImageDate();
     </script>
