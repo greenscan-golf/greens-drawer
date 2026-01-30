@@ -161,10 +161,28 @@
       #toast.show {
         opacity: 1;
       }
+      /* Date de prise de vue */
+      #imageDate {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(255, 255, 255, 0.9);
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-family: sans-serif;
+        font-size: 12px;
+        z-index: 1000;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        display: none;
+      }
+      #imageDate.visible {
+        display: block;
+      }
     </style>
   </head>
   <body>
     <div id="map"></div>
+    <div id="imageDate"></div>
     <div id="jsonPanel">
       <div id="jsonContent" contenteditable="true"></div>
       <div id="buttonContainer">
@@ -441,18 +459,75 @@
       // --- SWITCH BASEMAPS ---
       var btnIGN = document.getElementById("btnIGN"),
         btnESRI = document.getElementById("btnESRI");
+      var imageDate = document.getElementById("imageDate");
+      
+      // Fonction pour récupérer la date de prise de vue IGN
+      function updateImageDate() {
+        if (!map.hasLayer(ortho)) {
+          imageDate.classList.remove("visible");
+          return;
+        }
+        
+        var center = map.getCenter();
+        var zoom = map.getZoom();
+        
+        // API IGN pour obtenir les métadonnées de la couche
+        var url = "https://data.geopf.fr/wmts?" +
+          "layer=ORTHOIMAGERY.ORTHOPHOTOS&" +
+          "style=normal&" +
+          "tilematrixset=PM&" +
+          "Service=WMTS&" +
+          "Request=GetFeatureInfo&" +
+          "Version=1.0.0&" +
+          "Format=image/jpeg&" +
+          "TileMatrix=" + Math.floor(zoom) + "&" +
+          "TileCol=" + Math.floor((center.lng + 180) / 360 * Math.pow(2, Math.floor(zoom))) + "&" +
+          "TileRow=" + Math.floor((1 - Math.log(Math.tan(center.lat * Math.PI / 180) + 1 / Math.cos(center.lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, Math.floor(zoom))) + "&" +
+          "I=128&J=128&" +
+          "InfoFormat=application/json";
+        
+        fetch(url)
+          .then(function(response) { return response.json(); })
+          .then(function(data) {
+            if (data && data.features && data.features.length > 0) {
+              var date = data.features[0].properties.date_vol || data.features[0].properties.date;
+              if (date) {
+                imageDate.textContent = "📅 Prise de vue : " + date;
+                imageDate.classList.add("visible");
+              }
+            }
+          })
+          .catch(function() {
+            // En cas d'erreur, on affiche une date générique
+            imageDate.textContent = "📅 Orthophoto IGN";
+            imageDate.classList.add("visible");
+          });
+      }
+      
       btnIGN.onclick = () => {
         map.removeLayer(esri);
         map.addLayer(ortho);
         btnIGN.classList.add("active");
         btnESRI.classList.remove("active");
+        updateImageDate();
       };
       btnESRI.onclick = () => {
         map.removeLayer(ortho);
         map.addLayer(esri);
         btnESRI.classList.add("active");
         btnIGN.classList.remove("active");
+        imageDate.classList.remove("visible");
       };
+      
+      // Mettre à jour la date quand on déplace la carte
+      map.on("moveend", function() {
+        if (map.hasLayer(ortho)) {
+          updateImageDate();
+        }
+      });
+      
+      // Afficher la date au chargement initial
+      updateImageDate();
     </script>
   </body>
 </html>
