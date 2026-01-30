@@ -259,12 +259,27 @@
         setTimeout(() => loadGeoJSONFromPanel(true), 100);
       });
 
-      // --- LOAD LOCALSTORAGE ---
+      // --- LOAD LOCALSTORAGE or greens.json ---
       var savedData = localStorage.getItem("mapGeoJSON");
       if (savedData) {
         jsonPanel.textContent = savedData;
         loadGeoJSONFromPanel(true);
-      } else updateJSONPanel();
+      } else {
+        // Try to fetch greens.json if localStorage is empty
+        fetch("greens.json")
+          .then(function (response) {
+            if (!response.ok) throw new Error("No greens.json found");
+            return response.json();
+          })
+          .then(function (data) {
+            var jsonText = JSON.stringify(data, null, 2);
+            jsonPanel.textContent = jsonText;
+            loadGeoJSONFromPanel(true);
+          })
+          .catch(function () {
+            updateJSONPanel();
+          });
+      }
 
       // --- SWITCH BASEMAPS ---
       var btnIGN = document.getElementById("btnIGN"),
