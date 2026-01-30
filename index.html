@@ -32,6 +32,28 @@
         font-family: monospace;
         border-left: 1px solid #ccc;
         white-space: pre-wrap;
+        z-index: 2000;
+        position: relative;
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+      }
+      #jsonContent {
+        flex: 1;
+        overflow: auto;
+        margin-bottom: 10px;
+      }
+      #btnClear {
+        padding: 8px 12px;
+        background: #ff6b6b;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      #btnClear:hover {
+        background: #ff5252;
       }
       /* Reduce editing handle size */
       .leaflet-editing-icon {
@@ -110,7 +132,10 @@
   </head>
   <body>
     <div id="map"></div>
-    <div id="jsonPanel" contenteditable="true"></div>
+    <div id="jsonPanel">
+      <div id="jsonContent" contenteditable="true"></div>
+      <button id="btnClear">Clear</button>
+    </div>
 
     <div id="basemapSwitch">
       <button id="btnIGN" class="active">IGN</button>
@@ -211,6 +236,7 @@
           });
           L.DomEvent.on(container, "dblclick", function(e) {
             L.DomEvent.stopPropagation(e);
+            L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
           });
           L.DomEvent.on(container, "click", function (e) {
@@ -236,7 +262,8 @@
       L.control.toggleDrawings({ position: "topleft" }).addTo(map);
 
       // --- JSON PANEL ---
-      var jsonPanel = document.getElementById("jsonPanel");
+      var jsonPanel = document.getElementById("jsonContent");
+      var btnClear = document.getElementById("btnClear");
 
       function updateJSONPanel() {
         var geojson = drawnItems.toGeoJSON();
@@ -244,12 +271,6 @@
         jsonPanel.textContent = jsonText;
         localStorage.setItem("mapGeoJSON", jsonText);
       }
-
-      map.on(L.Draw.Event.CREATED, (e) => {
-        drawnItems.addLayer(e.layer);
-        updateJSONPanel();
-      });
-      map.on("draw:edited draw:deleted", updateJSONPanel);
 
       function loadGeoJSONFromPanel(shouldZoom) {
         var text = jsonPanel.textContent.trim();
@@ -270,6 +291,45 @@
         }
       }
 
+      function loadGreensJSON() {
+        fetch("greens.json")
+          .then(function (response) {
+            if (!response.ok) throw new Error("No greens.json found");
+            return response.json();
+          })
+          .then(function (data) {
+            var jsonText = JSON.stringify(data, null, 2);
+            jsonPanel.textContent = jsonText;
+            // Load directly without triggering input event
+            if (data.type === "FeatureCollection") {
+              drawnItems.clearLayers();
+              L.geoJSON(data, {
+                pointToLayer: (f, latlng) => L.marker(latlng),
+              }).eachLayer((l) => drawnItems.addLayer(l));
+              localStorage.setItem("mapGeoJSON", jsonText);
+              if (drawnItems.getLayers().length)
+                map.fitBounds(drawnItems.getBounds(), { padding: [50, 50] });
+            }
+          })
+          .catch(function () {
+            updateJSONPanel();
+          });
+      }
+
+      map.on(L.Draw.Event.CREATED, (e) => {
+        drawnItems.addLayer(e.layer);
+        updateJSONPanel();
+      });
+      map.on("draw:edited draw:deleted", updateJSONPanel);
+
+      btnClear.addEventListener("click", function(e) {
+        e.stopPropagation();
+        localStorage.removeItem("mapGeoJSON");
+        drawnItems.clearLayers();
+        jsonPanel.textContent = "";
+        loadGreensJSON();
+      });
+
       // --- PANEL INPUT / PASTE ---
       var inputTimeout;
       jsonPanel.addEventListener("input", () => {
@@ -285,26 +345,28 @@
       });
 
       // --- LOAD LOCALSTORAGE or greens.json ---
-      var savedData = localStorage.getItem("mapGeoJSON");
-      if (savedData) {
-        jsonPanel.textContent = savedData;
-        loadGeoJSONFromPanel(true);
-      } else {
-        // Try to fetch greens.json if localStorage is empty
-        fetch("greens.json")
-          .then(function (response) {
-            if (!response.ok) throw new Error("No greens.json found");
-            return response.json();
-          })
-          .then(function (data) {
-            var jsonText = JSON.stringify(data, null, 2);
-            jsonPanel.textContent = jsonText;
-            loadGeoJSONFromPanel(true);
-          })
-          .catch(function () {
-            updateJSONPanel();
-          });
-      }
+      window.addEventListener('load', function() {
+        var savedData = localStorage.getItem("mapGeoJSON");
+        var shouldLoadGreens = true;
+        
+        if (savedData) {
+          try {
+            var data = JSON.parse(savedData);
+            // Check if there are actual features
+            if (data.type === "FeatureCollection" && data.features && data.features.length > 0) {
+              jsonPanel.textContent = savedData;
+              loadGeoJSONFromPanel(true);
+              shouldLoadGreens = false;
+            }
+          } catch (e) {
+            console.log("Invalid saved data", e);
+          }
+        }
+        
+        if (shouldLoadGreens) {
+          loadGreensJSON();
+        }
+      });
 
       // --- SWITCH BASEMAPS ---
       var btnIGN = document.getElementById("btnIGN"),
