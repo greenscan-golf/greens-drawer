@@ -55,17 +55,19 @@
         cursor: pointer;
         font-weight: bold;
         flex: 1;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
       }
       #btnClear {
         background: #ff6b6b;
       }
-      #btnClear:hover {
+      #btnClear:hover, #btnClear:active {
         background: #ff5252;
       }
       #btnDownload {
         background: #4caf50;
       }
-      #btnDownload:hover {
+      #btnDownload:hover, #btnDownload:active {
         background: #45a049;
       }
       /* Reduce editing handle size */
@@ -107,6 +109,8 @@
         justify-content: center;
         font-size: 18px;
         pointer-events: auto !important;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
       }
       .leaflet-control-pan:hover,
       .leaflet-control-toggle:hover {
@@ -132,11 +136,16 @@
         background: white;
         cursor: pointer;
         border-radius: 4px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
       }
       #basemapSwitch button.active {
         background: #3388ff;
         color: white;
         border-color: #3388ff;
+      }
+      #basemapSwitch button:active {
+        transform: scale(0.95);
       }
       #btnESRI {
         display: none;
@@ -202,8 +211,14 @@
           flex-direction: row;
         }
         #btnClear, #btnDownload {
-          padding: 6px 8px;
-          font-size: 12px;
+          padding: 10px 12px;
+          font-size: 14px;
+          min-height: 44px;
+        }
+        #basemapSwitch button {
+          padding: 10px 16px;
+          font-size: 14px;
+          min-height: 44px;
         }
       }
     </style>
@@ -281,7 +296,7 @@
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
           });
-          L.DomEvent.on(container, "click", function (e) {
+          L.DomEvent.on(container, "click touchend", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
             if (container.classList.contains("active")) {
@@ -323,7 +338,7 @@
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
           });
-          L.DomEvent.on(container, "click", function (e) {
+          L.DomEvent.on(container, "click touchend", function (e) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
             visible = !visible;
@@ -418,16 +433,30 @@
       });
       map.on("draw:edited draw:deleted", updateJSONPanel);
 
-      btnClear.addEventListener("click", function(e) {
-        e.stopPropagation();
+      // Fonction pour gérer les clics (desktop et mobile)
+      function handleClick(callback) {
+        return function(e) {
+          e.stopPropagation();
+          e.preventDefault();
+          callback();
+        };
+      }
+
+      btnClear.addEventListener("click", handleClick(function() {
         localStorage.removeItem("mapGeoJSON");
         drawnItems.clearLayers();
         jsonPanel.textContent = "";
         updateJSONPanel();
-      });
+      }));
 
-      btnDownload.addEventListener("click", function(e) {
-        e.stopPropagation();
+      btnClear.addEventListener("touchend", handleClick(function() {
+        localStorage.removeItem("mapGeoJSON");
+        drawnItems.clearLayers();
+        jsonPanel.textContent = "";
+        updateJSONPanel();
+      }));
+
+      btnDownload.addEventListener("click", handleClick(function() {
         var text = jsonPanel.textContent.trim();
         if (!text) {
           showToast("⚠️ Aucune donnée à télécharger", 2000);
@@ -444,7 +473,26 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         showToast("✅ Téléchargement démarré", 2000);
-      });
+      }));
+
+      btnDownload.addEventListener("touchend", handleClick(function() {
+        var text = jsonPanel.textContent.trim();
+        if (!text) {
+          showToast("⚠️ Aucune donnée à télécharger", 2000);
+          return;
+        }
+        
+        var blob = new Blob([text], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "greens-" + new Date().toISOString().split('T')[0] + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("✅ Téléchargement démarré", 2000);
+      }));
 
       // --- PANEL INPUT / PASTE ---
       var inputTimeout;
@@ -532,20 +580,45 @@
           });
       }
       
-      btnIGN.onclick = () => {
+      function switchToIGN() {
         map.removeLayer(esri);
         map.addLayer(ortho);
         btnIGN.classList.add("active");
         btnESRI.classList.remove("active");
         updateImageDate();
-      };
-      btnESRI.onclick = () => {
+      }
+
+      function switchToESRI() {
         map.removeLayer(ortho);
         map.addLayer(esri);
         btnESRI.classList.add("active");
         btnIGN.classList.remove("active");
         imageDate.classList.remove("visible");
-      };
+      }
+
+      btnIGN.addEventListener("click", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        switchToIGN();
+      });
+
+      btnIGN.addEventListener("touchend", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        switchToIGN();
+      });
+
+      btnESRI.addEventListener("click", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        switchToESRI();
+      });
+
+      btnESRI.addEventListener("touchend", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        switchToESRI();
+      });
       
       // Mettre à jour la date quand on déplace la carte
       map.on("moveend", function() {
