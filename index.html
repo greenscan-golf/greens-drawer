@@ -945,6 +945,7 @@
       var measurePoints = [];
       var measureLayer = null;
       var measurePopup = null;
+      var measureMarkers = []; // Stocke les circle markers de mesure
 
       L.Control.Measure = L.Control.extend({
         onAdd: function (map) {
@@ -983,7 +984,7 @@
                 measureLayer.setLatLngs(measurePoints);
 
                 // Affiche les markers
-                L.circleMarker(e.latlng, {
+                var marker = L.circleMarker(e.latlng, {
                   radius: 4,
                   fillColor: "red",
                   color: "#fff",
@@ -991,6 +992,7 @@
                   opacity: 1,
                   fillOpacity: 0.8
                 }).addTo(map);
+                measureMarkers.push(marker); // Enregistre le marker
 
                 // Calcule et affiche la distance
                 if (measurePoints.length > 1) {
@@ -1030,6 +1032,11 @@
               if (measurePopup) {
                 map.removeLayer(measurePopup);
               }
+              // Efface tous les markers de mesure
+              measureMarkers.forEach(function (marker) {
+                map.removeLayer(marker);
+              });
+              measureMarkers = [];
               measurePoints = [];
             }
           });
