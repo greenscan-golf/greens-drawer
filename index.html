@@ -13,6 +13,15 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"
     />
+    <style>
+      .leaflet-measure {
+        margin: 0 !important;
+      }
+      .leaflet-measure-control {
+        width: 36px;
+        height: 36px;
+      }
+    </style>
 
     <style>
       body {
@@ -100,6 +109,10 @@
       }
       #map.pan-mode:active {
         cursor: grabbing !important;
+      }
+      /* Crosshair cursor for measure mode */
+      #map.measure-mode {
+        cursor: crosshair !important;
       }
       /* Control buttons */
       .leaflet-control-pan,
@@ -926,6 +939,106 @@
 
       // --- LEAFLET SCALE CONTROL ---
       L.control.scale().addTo(map);
+
+      // --- MEASURE TOOL ---
+      var measureActive = false;
+      var measurePoints = [];
+      var measureLayer = null;
+      var measurePopup = null;
+
+      L.Control.Measure = L.Control.extend({
+        onAdd: function (map) {
+          var container = L.DomUtil.create("div", "leaflet-bar leaflet-control");
+          var button = L.DomUtil.create("a", "", container);
+          button.innerHTML = "📏";
+          button.href = "#";
+          button.title = "Mesurer les distances";
+          button.style.width = "36px";
+          button.style.height = "36px";
+          button.style.lineHeight = "36px";
+          button.style.textAlign = "center";
+          button.style.cursor = "pointer";
+          button.id = "measureButton";
+
+          button.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (!measureActive) {
+              // Activation de la mesure
+              measureActive = true;
+              measurePoints = [];
+              button.style.background = "#3388ff";
+              button.style.color = "white";
+              map._container.classList.add("measure-mode");
+              measureLayer = L.polyline([], {
+                color: "red",
+                weight: 2,
+                dashArray: "5, 5"
+              }).addTo(map);
+
+              // Événement de clic sur la carte
+              var measureClickHandler = function (e) {
+                measurePoints.push(e.latlng);
+                measureLayer.setLatLngs(measurePoints);
+
+                // Affiche les markers
+                L.circleMarker(e.latlng, {
+                  radius: 4,
+                  fillColor: "red",
+                  color: "#fff",
+                  weight: 2,
+                  opacity: 1,
+                  fillOpacity: 0.8
+                }).addTo(map);
+
+                // Calcule et affiche la distance
+                if (measurePoints.length > 1) {
+                  var totalDistance = 0;
+                  for (var i = 0; i < measurePoints.length - 1; i++) {
+                    totalDistance += measurePoints[i].distanceTo(
+                      measurePoints[i + 1]
+                    );
+                  }
+                  var text =
+                    totalDistance > 1000
+                      ? (totalDistance / 1000).toFixed(2) + " km"
+                      : totalDistance.toFixed(0) + " m";
+
+                  if (measurePopup) {
+                    map.removeLayer(measurePopup);
+                  }
+                  measurePopup = L.popup()
+                    .setLatLng(e.latlng)
+                    .setContent("<b>Distance: " + text + "</b>")
+                    .openOn(map);
+                }
+              };
+
+              map.on("click", measureClickHandler);
+              button._measureClickHandler = measureClickHandler;
+            } else {
+              // Désactivation de la mesure
+              measureActive = false;
+              button.style.background = "";
+              button.style.color = "";
+              map._container.classList.remove("measure-mode");
+              map.off("click", button._measureClickHandler);
+              if (measureLayer) {
+                map.removeLayer(measureLayer);
+              }
+              if (measurePopup) {
+                map.removeLayer(measurePopup);
+              }
+              measurePoints = [];
+            }
+          });
+
+          return container;
+        }
+      });
+
+      new L.Control.Measure({ position: "topright" }).addTo(map);
     </script>
   </body>
 </html>
