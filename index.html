@@ -180,7 +180,7 @@
       #imageDate {
         position: absolute;
         bottom: 10px;
-        left: 10px;
+        left: 100px;
         background: rgba(255, 255, 255, 0.9);
         padding: 6px 12px;
         border-radius: 4px;
@@ -268,6 +268,7 @@
         color: #666;
         margin-top: 2px;
       }
+
       /* Mobile responsive */
       @media (max-width: 768px) {
         body {
@@ -305,6 +306,12 @@
         #searchContainer {
           width: calc(100% - 20px);
           max-width: none;
+        }
+        #dynamicScale {
+          bottom: auto;
+          top: 10px;
+          right: auto;
+          left: 10px;
         }
       }
     </style>
@@ -916,6 +923,9 @@
 
       // Afficher la date au chargement initial
       updateImageDate();
+
+      // --- LEAFLET SCALE CONTROL ---
+      L.control.scale().addTo(map);
     </script>
   </body>
 </html>
